@@ -5,77 +5,75 @@
   <title>Evrei Zakarpattya</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <!-- PDF.js стили -->
-  <link rel="stylesheet" href="https://mozilla.github.io/pdf.js/web/viewer.css">
-
   <style>
     html, body {
       margin: 0;
       height: 100%;
       overflow: hidden;
+      background: #e0e0e0;
     }
 
     #viewerContainer {
       position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      overflow: auto;
+      inset: 0;
+      overflow-y: auto;
+      padding: 16px;
+    }
+
+    canvas {
+      display: block;
+      margin: 0 auto 16px auto;
+      background: white;
+      box-shadow: 0 2px 6px rgba(0,0,0,.2);
     }
   </style>
 </head>
 <body>
 
 <div id="viewerContainer">
-  <div id="viewer" class="pdfViewer"></div>
+  <div id="viewer"></div>
 </div>
 
-<!-- PDF.js скрипты -->
-<script src="https://mozilla.github.io/pdf.js/build/pdf.js"></script>
+<!-- PDF.js (стабильный CDN) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.2.67/pdf.min.js"></script>
 
 <script>
-  const url = 'book.pdf';
+  const url = 'book.pdf'; // PDF рядом с index.html
 
-  const pdfjsLib = window['pdfjs-dist/build/pdf'];
+  const pdfjsLib = window.pdfjsLib;
 
   pdfjsLib.GlobalWorkerOptions.workerSrc =
-    'https://mozilla.github.io/pdf.js/build/pdf.worker.js';
+    'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.2.67/pdf.worker.min.js';
 
-  const container = document.getElementById('viewer');
-  const viewerContainer = document.getElementById('viewerContainer');
+  const viewer = document.getElementById('viewer');
 
-  let pdfDoc = null;
+  async function renderPDF() {
+    const pdf = await pdfjsLib.getDocument(url).promise;
 
-  function renderPage(pageNum) {
-    pdfDoc.getPage(pageNum).then(function(page) {
-      const scale = 1.2;
+    for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+      const page = await pdf.getPage(pageNum);
+
+      const scale = 1.25;
       const viewport = page.getViewport({ scale });
 
       const canvas = document.createElement('canvas');
-      const context = canvas.getContext('2d');
+      const ctx = canvas.getContext('2d');
 
-      canvas.height = viewport.height;
       canvas.width = viewport.width;
+      canvas.height = viewport.height;
 
-      container.appendChild(canvas);
+      viewer.appendChild(canvas);
 
-      const renderContext = {
-        canvasContext: context,
+      await page.render({
+        canvasContext: ctx,
         viewport: viewport
-      };
-
-      page.render(renderContext);
-    });
+      }).promise;
+    }
   }
 
-  pdfjsLib.getDocument(url).promise.then(function(pdf) {
-    pdfDoc = pdf;
-
-    // Рендерим все страницы подряд (одна под другой)
-    for (let i = 1; i <= pdf.numPages; i++) {
-      renderPage(i);
-    }
+  renderPDF().catch(err => {
+    console.error(err);
+    alert('Ошибка загрузки PDF. Проверь консоль.');
   });
 </script>
 
